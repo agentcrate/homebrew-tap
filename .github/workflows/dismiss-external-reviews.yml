@@ -15,8 +15,8 @@ name: Dismiss stale reviews (external PRs only)
 #
 #   - `GET /repos/{owner}/{repo}/collaborators/{username}/permission`
 #     returns the user's repo permission regardless of membership privacy
-#     and works with the default GITHUB_TOKEN. Anyone with `write` or
-#     `admin` here is internal to the org.
+#     and works with the default GITHUB_TOKEN. Anyone with `write`,
+#     `maintain`, or `admin` here is internal to the org.
 
 on:
   pull_request:
@@ -47,7 +47,12 @@ jobs:
               });
               permission = data.permission;
             } catch (e) {
-              core.info(`Permission lookup failed for ${actor}: ${e.message}`);
+              if (e.status === 404) {
+                core.info(`${actor} is not a collaborator (404) — treating as external.`);
+              } else {
+                core.setFailed(`Permission lookup failed for ${actor}: ${e.message}`);
+                return;
+              }
             }
 
             const internal = permission === "admin" || permission === "write" || permission === "maintain";
